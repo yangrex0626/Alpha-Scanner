@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>潛力幣種篩選器 · Alpha Scanner</title>
+<style>
+  :root{
+    --bg:#0b0e14; --panel:#141925; --panel2:#1b2230; --line:#222b3d;
+    --txt:#e6edf3; --dim:#8b98ad; --green:#26d07c; --red:#ff5c6c;
+    --amber:#ffb84d; --blue:#4d9fff; --accent:#7c5cff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+       font-family:"Segoe UI",system-ui,"Microsoft JhengHei",sans-serif;font-size:13px}
+  header{display:flex;align-items:center;gap:16px;padding:12px 20px;
+         background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+  h1{font-size:16px;margin:0;font-weight:700}
+  .tag{color:var(--accent);font-size:11px;letter-spacing:1px}
+  .meta{color:var(--dim);font-size:12px;display:flex;gap:14px;flex-wrap:wrap}
+  .meta b{color:var(--txt)}
+  .pos{color:var(--green)} .neg{color:var(--red)}
+  button{background:var(--panel2);color:var(--txt);border:1px solid var(--line);
+         padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px}
+  button:hover{border-color:var(--accent)}
+  button.on{background:var(--accent);border-color:var(--accent)}
+  .wrap{padding:16px 20px;max-width:1500px;margin:0 auto}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  input[type=number]{width:64px;background:var(--panel2);color:var(--txt);
+        border:1px solid var(--line);border-radius:6px;padding:5px}
+  /* sector rotation */
+  .sectors{display:flex;gap:8px;overflow-x:auto;margin-bottom:16px;padding-bottom:4px}
+  .sector{flex:0 0 auto;background:var(--panel);border:1px solid var(--line);
+          border-radius:8px;padding:8px 12px;min-width:96px}
+  .sector .n{font-size:11px;color:var(--dim)}
+  .sector .v{font-size:15px;font-weight:700;margin-top:2px}
+  /* table */
+  table{width:100%;border-collapse:collapse;background:var(--panel);border-radius:8px;overflow:hidden}
+  th,td{padding:7px 9px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{color:var(--dim);font-weight:600;cursor:pointer;position:sticky;top:0;background:var(--panel2);user-select:none}
+  th:first-child,td:first-child,td.l,th.l{text-align:left}
+  tr:hover td{background:var(--panel2)}
+  .sym{font-weight:700}
+  .sub{color:var(--dim);font-size:11px}
+  .score{font-weight:800;font-size:15px}
+  .pill{display:inline-block;padding:2px 7px;border-radius:20px;font-size:11px;font-weight:600}
+  .badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;
+         background:var(--panel2);border:1px solid var(--line);margin-left:3px}
+  .cand{color:var(--green);font-weight:700}
+  .bar{height:5px;border-radius:3px;background:var(--panel2);margin-top:3px;overflow:hidden}
+  .bar i{display:block;height:100%}
+  details.row td{background:var(--panel2)}
+  .detail{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;
+          padding:12px;text-align:left}
+  .detail .k{color:var(--dim);font-size:11px} .detail .vv{font-size:13px;margin-top:1px}
+  .legend{color:var(--dim);font-size:11px;margin-top:12px;line-height:1.7}
+  #loading{padding:40px;text-align:center;color:var(--dim)}
+  .spin{display:inline-block;width:16px;height:16px;border:2px solid var(--line);
+        border-top-color:var(--accent);border-radius:50%;animation:s 0.8s linear infinite;vertical-align:middle}
+  @keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>潛力幣種篩選器 <span class="tag">ALPHA SCANNER</span></h1></div>
+  <div class="meta" id="meta"></div>
+  <div style="flex:1"></div>
+  <button id="refresh">↻ 重新掃描</button>
+</header>
+
+<div class="wrap">
+  <div class="controls">
+    <button class="filt on" data-f="all">全部</button>
+    <button class="filt" data-f="cand">✅ 實戰候選 (第18條)</button>
+    <button class="filt" data-f="s80">🟢 ≥80</button>
+    <button class="filt" data-f="s90">⭐ ≥90</button>
+    <button class="filt" data-f="vol">🔊 量能異常 ≥2x</button>
+    <button class="filt" data-f="oi">📈 OI↑ 價↑</button>
+    <span style="color:var(--dim)">| 板塊</span>
+    <select id="sectorSel" style="background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:5px"></select>
+    <span style="flex:1"></span>
+    <span style="color:var(--dim)">Top</span>
+    <input type="number" id="topN" value="60" min="10" max="200">
+    <button id="apply">套用</button>
+  </div>
+
+  <div class="sectors" id="sectors"></div>
+
+  <div id="loading"><span class="spin"></span> 掃描中… 正在抓取 Binance / CoinGecko 即時數據</div>
+  <table id="tbl" style="display:none">
+    <thead><tr id="head"></tr></thead>
+    <tbody id="body"></tbody>
+  </table>
+
+  <div class="legend">
+    <b>Potential Score</b> = 技術面30% + 資金流30% + 鏈上20% + 情緒10% + 事件10%（缺資料的類別自動重新分配權重，覆蓋率見上方）。
+    <b>VolX</b> 成交量 ÷ 20日均量（≥2x +10 / ≥3x +20 / ≥5x +30）。
+    <b>OI%</b> 未平倉量變化（OI↑ 價↑ = ★★★★★ 新資金追價）。
+    <b>RS</b> 7日相對 BTC 強弱。
+    鏈上 / 情緒 / 事件 / 大戶流向 / 交易所流入流出 / 爆倉 需 API key（見 README）才會點亮。
+  </div>
+</div>
+
+<script>
+let DATA=null, filter="all", sortKey="potential_score", sortDir=-1, sectorFilter="ALL";
+
+const COLS=[
+  {k:"rank",t:"#",fmt:(c,i)=>i+1},
+  {k:"symbol",t:"幣種",cls:"l",fmt:c=>`<span class="sym">${c.base}</span> <span class="sub">${c.sector}${c.sector_rank?` · 板塊#${c.sector_rank}`:""}</span>`},
+  {k:"potential_score",t:"分數",fmt:c=>scoreCell(c)},
+  {k:"signal",t:"訊號",cls:"l",fmt:c=>`<span class="pill" style="background:${sigColor(c.potential_score)}22;color:${sigColor(c.potential_score)}">${c.signal}</span>${c.candidate?' <span class="cand">✅候選</span>':''}`},
+  {k:"chg_24h",t:"24h",fmt:c=>pct(c.chg_24h)},
+  {k:"chg_7d",t:"7d",fmt:c=>pct(c.chg_7d)},
+  {k:"rs_vs_btc",t:"RS·BTC",fmt:c=>pct(c.rs_vs_btc)},
+  {k:"volume_ratio",t:"VolX",fmt:c=>volCell(c.volume_ratio)},
+  {k:"oi_change_pct",t:"OI%",fmt:c=>pct(c.oi_change_pct)},
+  {k:"funding_pct",t:"Fund%",fmt:c=>c.funding_pct==null?"-":`<span class="${c.funding_pct<0?'pos':c.funding_pct>0.05?'neg':''}">${c.funding_pct>=0?'+':''}${c.funding_pct.toFixed(3)}</span>`},
+  {k:"rsi",t:"RSI",fmt:c=>c.rsi==null?"-":`<span class="${c.rsi>80?'neg':c.rsi>=55?'pos':''}">${c.rsi}</span>`},
+  {k:"market_cap",t:"市值",fmt:c=>usd(c.market_cap)},
+  {k:"quote_vol_24h",t:"成交額",fmt:c=>usd(c.quote_vol_24h)},
+  {k:"flags",t:"旗標",cls:"l",fmt:c=>flagsCell(c)},
+];
+
+function pct(v){if(v==null)return"-";const cl=v>0?"pos":v<0?"neg":"";return `<span class="${cl}">${v>=0?'+':''}${v.toFixed(1)}%</span>`}
+function usd(v){if(v==null)return"-";const a=Math.abs(v);if(a>=1e9)return(v/1e9).toFixed(1)+"B";if(a>=1e6)return(v/1e6).toFixed(1)+"M";if(a>=1e3)return(v/1e3).toFixed(0)+"K";return v.toFixed(0)}
+function sigColor(s){return s>=90?"#7c5cff":s>=80?"#26d07c":s>=65?"#ffb84d":"#8b98ad"}
+function scoreCell(c){const col=sigColor(c.potential_score);return `<span class="score" style="color:${col}">${c.potential_score}</span><div class="bar"><i style="width:${c.potential_score}%;background:${col}"></i></div>`}
+function volCell(v){if(v==null)return"-";const cl=v>=3?"neg":v>=2?"pos":"";return `<span class="${cl}" style="font-weight:${v>=2?700:400}">${v}x</span>`}
+function flagsCell(c){let f=[];if(c.ema_bull)f.push("EMA多頭");const bn={prior_high:"破前高",box:"破箱體",downtrend:"破下降",boll_upper:"破布林"};(c.breakouts||[]).forEach(b=>f.push(bn[b]));return f.map(x=>`<span class="badge">${x}</span>`).join("")||"-"}
+
+function render(){
+  if(!DATA)return;
+  const m=DATA.meta;
+  document.getElementById("meta").innerHTML=
+    `<span>更新 <b>${m.timestamp}</b></span>`+
+    `<span>BTC 24h <b class="${m.btc_chg_24h>=0?'pos':'neg'}">${m.btc_chg_24h>=0?'+':''}${m.btc_chg_24h}%</b> · 7d <b class="${m.btc_chg_7d>=0?'pos':'neg'}">${m.btc_chg_7d>=0?'+':''}${m.btc_chg_7d}%</b></span>`+
+    (m.fng!=null?`<span>情緒 F&G <b style="color:${m.fng<25?'var(--red)':m.fng>55?'var(--green)':'var(--amber)'}">${m.fng} ${m.fng_label||''}</b></span>`:'')+
+    `<span>掃描 <b>${m.scanned}</b> 幣 · 覆蓋率 <b>${(DATA.coins[0]||{}).coverage||0}%</b></span>`;
+
+  // sector rotation
+  document.getElementById("sectors").innerHTML=DATA.sectors.map(s=>
+    `<div class="sector"><div class="n">#${s.rank} ${s.sector} (${s.count})</div>
+     <div class="v ${s.avg_chg_24h>=0?'pos':'neg'}">${s.avg_chg_24h>=0?'+':''}${s.avg_chg_24h}%</div></div>`).join("");
+
+  const sel=document.getElementById("sectorSel");
+  if(sel.options.length<=1){
+    sel.innerHTML='<option value="ALL">全部</option>'+
+      [...new Set(DATA.coins.map(c=>c.sector))].sort().map(s=>`<option>${s}</option>`).join("");
+  }
+
+  // head
+  document.getElementById("head").innerHTML=COLS.map(c=>
+    `<th class="${c.cls||''}" data-k="${c.k}">${c.t}${sortKey===c.k?(sortDir<0?' ▼':' ▲'):''}</th>`).join("");
+  document.querySelectorAll("#head th").forEach(th=>th.onclick=()=>{
+    const k=th.dataset.k;if(k==="rank"||k==="flags"||k==="symbol")return;
+    if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=-1;}render();});
+
+  // filter + sort
+  let rows=DATA.coins.slice();
+  if(sectorFilter!=="ALL")rows=rows.filter(c=>c.sector===sectorFilter);
+  if(filter==="cand")rows=rows.filter(c=>c.candidate);
+  else if(filter==="s80")rows=rows.filter(c=>c.potential_score>=80);
+  else if(filter==="s90")rows=rows.filter(c=>c.potential_score>=90);
+  else if(filter==="vol")rows=rows.filter(c=>c.volume_ratio>=2);
+  else if(filter==="oi")rows=rows.filter(c=>c.oi_signal&&c.oi_signal.includes("★"));
+  rows.sort((a,b)=>{const x=a[sortKey],y=b[sortKey];if(x==null)return 1;if(y==null)return -1;return (x>y?1:x<y?-1:0)*sortDir;});
+
+  document.getElementById("body").innerHTML=rows.map((c,i)=>{
+    const cells=COLS.map(col=>`<td class="${col.cls||''}">${col.fmt(c,i)}</td>`).join("");
+    return `<tr class="main" data-sym="${c.symbol}">${cells}</tr>
+      <tr class="det" data-sym="${c.symbol}" style="display:none"><td colspan="${COLS.length}">${detail(c)}</td></tr>`;
+  }).join("");
+
+  document.querySelectorAll("tr.main").forEach(tr=>tr.onclick=()=>{
+    const d=document.querySelector(`tr.det[data-sym="${tr.dataset.sym}"]`);
+    d.style.display=d.style.display==="none"?"":"none";});
+
+  document.getElementById("loading").style.display="none";
+  document.getElementById("tbl").style.display="";
+}
+
+function detail(c){
+  const sub=[["技術面",c.score_technical],["資金流",c.score_capital],["鏈上",c.score_onchain],["情緒",c.score_sentiment],["事件",c.score_event]];
+  const item=(k,v)=>`<div><div class="k">${k}</div><div class="vv">${v}</div></div>`;
+  return `<div class="detail">
+    ${sub.map(([k,v])=>item(k+" 分數",`<b style="color:${sigColor(v)}">${v}</b>/100`)).join("")}
+    ${item("價格",c.price)}
+    ${item("EMA20 / 50 / 200",`${fx(c.ema20)} / ${fx(c.ema50)} / ${fx(c.ema200)}`)}
+    ${item("OI 訊號",c.oi_signal)}
+    ${item("OI (USD)",usd(c.oi_usd))}
+    ${item("Funding",c.funding_pct==null?"-":c.funding_pct+"%")}
+    ${item("Taker 買賣比",c.taker_ratio??"-")}
+    ${item("大戶多空比",c.ls_ratio??"-")}
+    ${item("FDV",usd(c.fdv))}
+    ${item("市值排名",c.mc_rank?("#"+c.mc_rank):"-")}
+    ${item("布林上軌",fx(c.boll_upper))}
+    ${item("鏈上 TVL",c.tvl?usd(c.tvl):"無 (非 DeFi 協議)")}
+    ${item("TVL 7日變化",c.tvl_change_7d==null?"-":pct(c.tvl_change_7d))}
+    ${item("大戶淨流入",c.whale_netflow_usd==null?"需 Whale Alert key":usd(c.whale_netflow_usd))}
+    ${item("交易所淨流",c.exchange_netflow_usd==null?"需 Glassnode key":usd(c.exchange_netflow_usd))}
+  </div>`;
+}
+function fx(v){return v==null?"-":(v>=1?v.toFixed(2):v.toPrecision(4))}
+
+async function load(refresh){
+  document.getElementById("loading").style.display="";
+  document.getElementById("tbl").style.display="none";
+  const top=document.getElementById("topN").value;
+  const r=await fetch(`/api/scan?top=${top}${refresh?'&refresh=1':''}`);
+  DATA=await r.json();
+  render();
+}
+
+document.querySelectorAll(".filt").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".filt").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on");filter=b.dataset.f;render();});
+document.getElementById("sectorSel").onchange=e=>{sectorFilter=e.target.value;render();};
+document.getElementById("refresh").onclick=()=>load(true);
+document.getElementById("apply").onclick=()=>load(true);
+load(false);
+</script>
+</body>
+</html>
