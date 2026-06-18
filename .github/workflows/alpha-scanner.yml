@@ -3,7 +3,12 @@ name: Alpha Scanner Sentinel
 on:
   schedule:
     - cron: "*/30 * * * *"   # 每 30 分鐘(GitHub 排程常有數分鐘延遲,屬正常)
-  workflow_dispatch:          # 也可在 Actions 頁面手動觸發測試
+  workflow_dispatch:          # 也可在 Actions 頁面手動觸發
+    inputs:
+      test_telegram:
+        description: "勾選=只發一則測試訊息到 Telegram(驗證通知)"
+        type: boolean
+        default: false
 
 # 同時間只跑一個,避免重疊
 concurrency:
@@ -35,4 +40,5 @@ jobs:
           TELEGRAM_CHAT: ${{ secrets.TELEGRAM_CHAT }}
           TOP_N: "40"
           MIN_SCORE: "80"
+          TEST: ${{ inputs.test_telegram }}
         run: node cloud/scan.mjs

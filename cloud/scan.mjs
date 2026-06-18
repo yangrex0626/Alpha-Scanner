@@ -65,6 +65,12 @@ async function sendTelegram(text){
 }
 
 async function main(){
+  // 測試模式:只發一則訊息驗證 Telegram 是否設定正確
+  if(process.env.TEST==="true"){
+    await sendTelegram("✅ Alpha Scanner 雲端哨兵測試成功!通知設定正常。");
+    console.log("已發送測試訊息(若手機沒收到,請檢查 TELEGRAM_TOKEN / TELEGRAM_CHAT)。");
+    return;
+  }
   const [info,tickers]=await Promise.all([jget(`${FAPI}/fapi/v1/exchangeInfo`),jget(`${FAPI}/fapi/v1/ticker/24hr`)]);
   if(!tickers){console.log("無法連線 Binance");return;}
   const perp=new Set((info?.symbols||[]).filter(s=>s.contractType==="PERPETUAL"&&s.quoteAsset==="USDT"&&s.status==="TRADING").map(s=>s.symbol));
