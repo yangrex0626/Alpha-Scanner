@@ -7,6 +7,9 @@ __pycache__/
 .venv/
 venv/
 
+# claude code local config
+.claude/
+
 # os / editor
 .DS_Store
 Thumbs.db
