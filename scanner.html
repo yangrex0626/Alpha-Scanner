@@ -58,6 +58,24 @@
   #modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;align-items:center;justify-content:center}
   #modalBox{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;max-width:580px;width:90%;max-height:82vh;overflow:auto}
   #modalBox table td{padding:5px 4px;border-bottom:1px solid var(--line)}
+  .tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px}
+  #tbl{min-width:860px}
+  /* 手機優化 */
+  @media(max-width:640px){
+    body{font-size:12px}
+    header{padding:9px 11px;gap:8px}
+    h1{font-size:14px}
+    .tag{display:none}
+    .wrap{padding:8px 9px}
+    .controls{gap:6px}
+    .controls button,.controls select,.controls input{font-size:11px;padding:5px 8px}
+    th,td{padding:6px 7px}
+    .sector{min-width:78px;padding:6px 9px}
+    .sector .v{font-size:14px}
+    .detail{grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:8px}
+    #modalBox{padding:16px}
+    #wslider{width:64px}
+  }
 </style>
 </head>
 <body>
@@ -96,7 +114,7 @@
 
   <div id="loading"><span class="spin"></span> <span id="ltext">準備中…</span>
     <div class="prog"><i id="pbar"></i></div></div>
-  <table id="tbl" style="display:none"><thead><tr id="head"></tr></thead><tbody id="body"></tbody></table>
+  <div class="tablewrap"><table id="tbl" style="display:none"><thead><tr id="head"></tr></thead><tbody id="body"></tbody></table></div>
 
   <div class="legend">
     <b>Potential Score</b> = 技術面50% + 資金流50%。情緒(F&G)為頂部大盤參考、不計入個別幣評分。
