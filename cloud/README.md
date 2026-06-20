@@ -49,7 +49,11 @@ Repo → **Settings → Secrets and variables → Actions → New repository sec
 - **通知條件**:`cloud/scan.mjs` 裡 `alert = candidate || score>=MIN_SCORE`,可自行調整。
 
 ## 注意
-- 這支雲端版只用 **Binance 免費資料**(技術 + 量能 + OI + Funding),算出分數與 ✅候選 —— 跟網頁版的核心邏輯一致。
+- 雲端版資料源是 **OKX 永續合約**(不是 Binance)。原因:GitHub 伺服器在美國,**Binance 封鎖美國 IP**(會「無法連線」),OKX 公開行情不封,所以雲端改用 OKX。
+  - 網頁版(scanner.html)仍用 Binance —— 你在台灣的瀏覽器連得到,不受影響。
+  - 兩邊幣種範圍/分數會略有差異,屬正常。
+- 訊號:技術面 + 量能異常 + OI 變化 + 相對強弱,算出分數與 ✅候選。
+- OI 變化採「跨次比較」(這次現值 vs 上次,存在 state.json),所以**第一次執行只建立基準、不發通知**,之後才會偵測新標的。
 - 不含 AI 機率 / CoinGecko / F&G(那些留在網頁版用)。
 - 「新標的」判斷靠 `state.json`(由 Actions 快取保存),所以同一個幣不會每 30 分鐘重複吵你,直到它掉出清單再重新進榜才會再通知。
 - 免費額度:GitHub Actions 私人 repo 每月 2000 分鐘,這支每次跑約 1 分鐘,每 30 分鐘一次 → 每月約 1440 分鐘,**在免費額度內**(若不夠就把頻率調低)。
